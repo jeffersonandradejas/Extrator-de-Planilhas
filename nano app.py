@@ -1,21 +1,57 @@
 import streamlit as st
-import pytesseract
-from PIL import Image
 import pandas as pd
+import io
 
-st.title("Extrator de Tabela de Imagem")
+st.title("Visualizador de Dados Colados")
 
-uploaded_file = st.file_uploader("Envie o print da planilha", type=["png", "jpg", "jpeg"])
-if uploaded_file:
-    image = Image.open(uploaded_file)
-    st.image(image, caption="Imagem enviada", use_column_width=True)
+st.write("Cole os dados da planilha abaixo (separados por tabulação):")
 
-    raw_text = pytesseract.image_to_string(image)
+# Colunas originais
+colunas = [
+    "Solicitação", "UG", "Órgão", "UGE", "ND", "Item",
+    "Situação", "Código", "Fornecedor", "CNPJ",
+    "Licit SIASG", "Responsável", "Dt Solicitação", "Valor"
+]
 
-    linhas = raw_text.strip().split("\n")
-    dados = [linha.split() for linha in linhas if linha.strip()]
+# Colunas a remover
+colunas_remover = ["UG", "ND", "Item", "Código", "Responsável", "Situação"]
 
-    df = pd.DataFrame(dados)
+# Área de texto para colar os dados
+dados_colados = st.text_area("Cole aqui os dados", height=400)
 
-    st.subheader("Tabela extraída (copie e cole livremente):")
-    st.dataframe(df, use_container_width=True)
+if dados_colados:
+    try:
+        # Converte o texto colado em DataFrame
+        df = pd.read_csv(io.StringIO(dados_colados), sep="\t", header=None)
+        df.columns = colunas[:df.shape[1]]
+
+        # Remove colunas indesejadas (inclui Situação)
+        df_filtrado = df.drop(columns=colunas_remover, errors="ignore")
+
+        # Insere coluna em branco após "UGE"
+        if "UGE" in df_filtrado.columns:
+            idx_uge = df_filtrado.columns.get_loc("UGE") + 1
+            df_filtrado.insert(idx_uge, "Coluna em branco", "")
+
+        # Insere coluna em branco chamada "Situação" no lugar original
+        if "Fornecedor" in df_filtrado.columns:
+            idx_forn = df_filtrado.columns.get_loc("Fornecedor")
+            df_filtrado.insert(idx_forn, "Situação", "")
+
+        # Reordenar colunas: colocar "Valor" antes de "Dt Solicitação"
+        cols = df_filtrado.columns.tolist()
+        if "Valor" in cols and "Dt Solicitação" in cols:
+            cols.remove("Valor")
+            dt_index = cols.index("Dt Solicitação")
+            cols.insert(dt_index, "Valor")
+            df_filtrado = df_filtrado[cols]
+
+        st.subheader("Tabela estruturada com ajustes:")
+        st.dataframe(df_filtrado, use_container_width=True)
+
+        # Botão para baixar como CSV
+        csv = df_filtrado.to_csv(index=False).encode('utf-8')
+        st.download_button("Baixar como CSV", csv, "dados_ajustados.csv", "text/csv")
+
+    except Exception as e:
+        st.error(f"Erro ao processar os dados: {e}")
