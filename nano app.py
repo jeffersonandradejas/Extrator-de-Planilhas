@@ -28,10 +28,11 @@ if dados_colados:
         # Remove colunas indesejadas (inclui Situação)
         df_filtrado = df.drop(columns=colunas_remover, errors="ignore")
 
-        # Insere coluna em branco após "UGE"
+        # Insere duas colunas em branco após "UGE"
         if "UGE" in df_filtrado.columns:
             idx_uge = df_filtrado.columns.get_loc("UGE") + 1
-            df_filtrado.insert(idx_uge, "Coluna em branco", "")
+            df_filtrado.insert(idx_uge, "Coluna em branco 1", "")
+            df_filtrado.insert(idx_uge + 1, "Coluna em branco 2", "")
 
         # Insere coluna em branco chamada "Situação" no lugar original
         if "Fornecedor" in df_filtrado.columns:
