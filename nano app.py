@@ -8,30 +8,18 @@ st.title("Visualizador de Dados Colados")
 
 st.write("📋 Cole os dados da planilha abaixo (separados por tabulação):")
 
-# Colunas que você quer manter
-colunas_desejadas = [
-    "Solicitação", "UGE", "Órgão", "Fornecedor", "CNPJ",
-    "Licit SIASG", "Dt Solicitação", "Valor"
-]
-
 # Área de colagem expandida
 dados_colados = st.text_area("Cole aqui os dados", height=700)
 
 if dados_colados:
     try:
-        # Lê os dados ignorando colunas extras
-        df = pd.read_csv(
-            io.StringIO(dados_colados),
-            sep="\t",
-            header=None,
-            engine="python"
-        )
+        # Lê os dados colados sem exigir número fixo de colunas
+        df = pd.read_csv(io.StringIO(dados_colados), sep="\t", header=None, engine="python")
 
-        # Aplica nomes genéricos temporários
+        # Renomeia colunas com nomes genéricos
         df.columns = [f"col_{i}" for i in range(df.shape[1])]
 
-        # Mapeia colunas desejadas com base na posição
-        # Ajuste os índices conforme a estrutura real dos dados
+        # Mapeia colunas desejadas com base na posição (ajuste conforme necessário)
         colunas_mapeadas = {
             "Solicitação": "col_0",
             "UGE": "col_3",
@@ -43,6 +31,7 @@ if dados_colados:
             "Valor": "col_14"
         }
 
+        # Filtra e renomeia
         df_filtrado = df[list(colunas_mapeadas.values())].copy()
         df_filtrado.columns = list(colunas_mapeadas.keys())
 
