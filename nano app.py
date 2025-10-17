@@ -2,9 +2,9 @@ import streamlit as st
 import pandas as pd
 import io
 
-st.set_page_config(page_title="Visualizador de Dados Colados", layout="wide")
+st.set_page_config(page_title="Solicitação de Empenho - Visualizador", layout="wide")
 
-st.title("Visualizador de Dados Colados")
+st.title("Solicitação de Empenho - Visualizador")
 
 # Cabeçalho com campo de colagem à esquerda e nome do desenvolvedor à direita
 col1, col2 = st.columns([4, 1])
@@ -29,7 +29,7 @@ if dados_colados:
         # Mapeamento atualizado
         colunas_mapeadas = {
             "SOL": "col_0",
-            "APOIADA": "col_2",     # ✅ UG Cred (HARF)
+            "APOIADA": "col_2",     # UG Cred (HARF)
             "IL": "col_4",          # Códigos como C25117
             "FORNECEDOR": "col_9",
             "PAG": "col_10",
