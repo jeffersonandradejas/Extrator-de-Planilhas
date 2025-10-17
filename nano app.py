@@ -6,8 +6,14 @@ st.set_page_config(page_title="Visualizador de Dados Colados", layout="wide")
 
 st.title("Visualizador de Dados Colados")
 
-st.write("📋 Cole os dados da planilha abaixo (separados por tabulação):")
+# Cabeçalho com campo de colagem à esquerda e nome do desenvolvedor à direita
+col1, col2 = st.columns([4, 1])
+with col1:
+    st.write("📋 Cole os dados da planilha abaixo (separados por tabulação):")
+with col2:
+    st.markdown("<div style='text-align: right; font-size: 14px;'>Desenvolvedor: <b>2S SAD Andrade</b></div>", unsafe_allow_html=True)
 
+# Área de colagem
 dados_colados = st.text_area("Cole aqui os dados", height=700)
 
 if dados_colados:
