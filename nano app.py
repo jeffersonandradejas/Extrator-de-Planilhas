@@ -2,57 +2,67 @@ import streamlit as st
 import pandas as pd
 import io
 
+st.set_page_config(page_title="Visualizador de Dados Colados", layout="wide")
+
 st.title("Visualizador de Dados Colados")
 
-st.write("Cole os dados da planilha abaixo (separados por tabulação):")
+st.write("📋 Cole os dados da planilha abaixo (separados por tabulação):")
 
-# Colunas originais
-colunas = [
-    "Solicitação", "UG", "Órgão", "UGE", "ND", "Item",
-    "Situação", "Código", "Fornecedor", "CNPJ",
-    "Licit SIASG", "Responsável", "Dt Solicitação", "Valor"
+# Colunas que você quer manter
+colunas_desejadas = [
+    "Solicitação", "UGE", "Órgão", "Fornecedor", "CNPJ",
+    "Licit SIASG", "Dt Solicitação", "Valor"
 ]
 
-# Colunas a remover
-colunas_remover = ["UG", "ND", "Item", "Código", "Responsável", "Situação"]
-
-# Área de texto para colar os dados
-dados_colados = st.text_area("Cole aqui os dados", height=400)
+# Área de colagem expandida
+dados_colados = st.text_area("Cole aqui os dados", height=700)
 
 if dados_colados:
     try:
-        # Converte o texto colado em DataFrame
-        df = pd.read_csv(io.StringIO(dados_colados), sep="\t", header=None)
-        df.columns = colunas[:df.shape[1]]
+        # Lê os dados ignorando colunas extras
+        df = pd.read_csv(
+            io.StringIO(dados_colados),
+            sep="\t",
+            header=None,
+            engine="python"
+        )
 
-        # Remove colunas indesejadas (inclui Situação)
-        df_filtrado = df.drop(columns=colunas_remover, errors="ignore")
+        # Aplica nomes genéricos temporários
+        df.columns = [f"col_{i}" for i in range(df.shape[1])]
 
-        # Insere duas colunas em branco após "UGE"
-        if "UGE" in df_filtrado.columns:
-            idx_uge = df_filtrado.columns.get_loc("UGE") + 1
-            df_filtrado.insert(idx_uge, "Coluna em branco 1", "")
-            df_filtrado.insert(idx_uge + 1, "Coluna em branco 2", "")
+        # Mapeia colunas desejadas com base na posição
+        # Ajuste os índices conforme a estrutura real dos dados
+        colunas_mapeadas = {
+            "Solicitação": "col_0",
+            "UGE": "col_3",
+            "Órgão": "col_2",
+            "Fornecedor": "col_9",
+            "CNPJ": "col_10",
+            "Licit SIASG": "col_11",
+            "Dt Solicitação": "col_13",
+            "Valor": "col_14"
+        }
 
-        # Insere coluna em branco chamada "Situação" no lugar original
-        if "Fornecedor" in df_filtrado.columns:
-            idx_forn = df_filtrado.columns.get_loc("Fornecedor")
-            df_filtrado.insert(idx_forn, "Situação", "")
+        df_filtrado = df[list(colunas_mapeadas.values())].copy()
+        df_filtrado.columns = list(colunas_mapeadas.keys())
 
-        # Reordenar colunas: colocar "Valor" antes de "Dt Solicitação"
-        cols = df_filtrado.columns.tolist()
-        if "Valor" in cols and "Dt Solicitação" in cols:
-            cols.remove("Valor")
-            dt_index = cols.index("Dt Solicitação")
-            cols.insert(dt_index, "Valor")
-            df_filtrado = df_filtrado[cols]
+        # Conversão de valores
+        df_filtrado["Valor"] = pd.to_numeric(
+            df_filtrado["Valor"].astype(str).str.replace(".", "").str.replace(",", "."),
+            errors="coerce"
+        )
 
-        st.subheader("Tabela estruturada com ajustes:")
-        st.dataframe(df_filtrado, use_container_width=True)
+        # Conversão de datas
+        df_filtrado["Dt Solicitação"] = pd.to_datetime(
+            df_filtrado["Dt Solicitação"], dayfirst=True, errors="coerce"
+        )
+
+        st.subheader("📊 Tabela formatada:")
+        st.dataframe(df_filtrado, use_container_width=True, height=600)
 
         # Botão para baixar como CSV
         csv = df_filtrado.to_csv(index=False).encode('utf-8')
-        st.download_button("Baixar como CSV", csv, "dados_ajustados.csv", "text/csv")
+        st.download_button("📥 Baixar como CSV", csv, "dados_ajustados.csv", "text/csv")
 
     except Exception as e:
-        st.error(f"Erro ao processar os dados: {e}")
+        st.error(f"❌ Erro ao processar os dados: {e}")
