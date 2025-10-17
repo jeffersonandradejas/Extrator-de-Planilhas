@@ -8,50 +8,63 @@ st.title("Visualizador de Dados Colados")
 
 st.write("📋 Cole os dados da planilha abaixo (separados por tabulação):")
 
-# Área de colagem expandida
 dados_colados = st.text_area("Cole aqui os dados", height=700)
 
 if dados_colados:
     try:
-        # Lê os dados colados sem exigir número fixo de colunas
-        df = pd.read_csv(io.StringIO(dados_colados), sep="\t", header=None, engine="python")
+        # Remove espaços em branco no início das linhas
+        linhas = [linha.lstrip() for linha in dados_colados.strip().split("\n")]
+        dados_limpos = "\n".join(linhas)
 
-        # Renomeia colunas com nomes genéricos
+        # Lê os dados colados
+        df = pd.read_csv(io.StringIO(dados_limpos), sep="\t", header=None, engine="python", on_bad_lines="skip")
         df.columns = [f"col_{i}" for i in range(df.shape[1])]
 
-        # Mapeia colunas desejadas com base na posição (ajuste conforme necessário)
+        # Mapeamento atualizado
         colunas_mapeadas = {
-            "Solicitação": "col_0",
-            "UGE": "col_3",
-            "Órgão": "col_2",
-            "Fornecedor": "col_9",
-            "CNPJ": "col_10",
-            "Licit SIASG": "col_11",
-            "Dt Solicitação": "col_13",
-            "Valor": "col_14"
+            "SOL": "col_0",
+            "APOIADA": "col_2",     # ✅ UG Cred (HARF)
+            "IL": "col_4",          # Códigos como C25117
+            "FORNECEDOR": "col_9",
+            "PAG": "col_10",
+            "PREGÃO": "col_11",
+            "VALOR": "col_14",
+            "DATA": "col_13"
         }
 
-        # Filtra e renomeia
-        df_filtrado = df[list(colunas_mapeadas.values())].copy()
-        df_filtrado.columns = list(colunas_mapeadas.keys())
+        # Extrai colunas existentes
+        colunas_existentes = [v for v in colunas_mapeadas.values() if v in df.columns]
+        df_filtrado = df[colunas_existentes].copy()
+        df_filtrado.columns = [k for k, v in colunas_mapeadas.items() if v in df.columns]
 
-        # Conversão de valores
-        df_filtrado["Valor"] = pd.to_numeric(
-            df_filtrado["Valor"].astype(str).str.replace(".", "").str.replace(",", "."),
-            errors="coerce"
-        )
+        # Insere colunas em branco após IL
+        for i, nova_coluna in enumerate(["EMPENHO", "ID", "STATUS"]):
+            df_filtrado.insert(3 + i, nova_coluna, "")
 
-        # Conversão de datas
-        df_filtrado["Dt Solicitação"] = pd.to_datetime(
-            df_filtrado["Dt Solicitação"], dayfirst=True, errors="coerce"
-        )
+        # Formata VALOR
+        if "VALOR" in df_filtrado.columns:
+            df_filtrado["VALOR"] = df_filtrado["VALOR"].astype(str).str.replace(".", "").str.replace(",", ".")
+            df_filtrado["VALOR"] = pd.to_numeric(df_filtrado["VALOR"], errors="coerce")
+            df_filtrado["VALOR"] = df_filtrado["VALOR"].apply(lambda x: f"R$ {x:,.2f}" if pd.notnull(x) else "")
+
+        # Formata DATA
+        if "DATA" in df_filtrado.columns:
+            df_filtrado["DATA"] = pd.to_datetime(df_filtrado["DATA"], dayfirst=True, errors="coerce")
+            df_filtrado["DATA"] = df_filtrado["DATA"].dt.strftime("%d/%m/%Y")
+
+        # Reordena para colocar VALOR antes de DATA
+        colunas_ordenadas = df_filtrado.columns.tolist()
+        if "VALOR" in colunas_ordenadas and "DATA" in colunas_ordenadas:
+            colunas_ordenadas.remove("VALOR")
+            idx_data = colunas_ordenadas.index("DATA")
+            colunas_ordenadas.insert(idx_data, "VALOR")
+            df_filtrado = df_filtrado[colunas_ordenadas]
 
         st.subheader("📊 Tabela formatada:")
         st.dataframe(df_filtrado, use_container_width=True, height=600)
 
-        # Botão para baixar como CSV
         csv = df_filtrado.to_csv(index=False).encode('utf-8')
-        st.download_button("📥 Baixar como CSV", csv, "dados_ajustados.csv", "text/csv")
+        st.download_button("📥 Baixar como CSV", csv, "dados_formatados.csv", "text/csv")
 
     except Exception as e:
         st.error(f"❌ Erro ao processar os dados: {e}")
