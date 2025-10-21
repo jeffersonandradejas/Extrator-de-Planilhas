@@ -47,11 +47,18 @@ if dados_colados:
         for i, nova_coluna in enumerate(["EMPENHO", "ID", "STATUS"]):
             df_filtrado.insert(3 + i, nova_coluna, "")
 
-        # Formata VALOR
+        # Formata VALOR no padrão brasileiro
         if "VALOR" in df_filtrado.columns:
-            df_filtrado["VALOR"] = df_filtrado["VALOR"].astype(str).str.replace(".", "").str.replace(",", ".")
+            df_filtrado["VALOR"] = (
+                df_filtrado["VALOR"]
+                .astype(str)
+                .str.replace(".", "", regex=False)
+                .str.replace(",", ".", regex=False)
+            )
             df_filtrado["VALOR"] = pd.to_numeric(df_filtrado["VALOR"], errors="coerce")
-            df_filtrado["VALOR"] = df_filtrado["VALOR"].apply(lambda x: f"R$ {x:,.2f}" if pd.notnull(x) else "")
+            df_filtrado["VALOR"] = df_filtrado["VALOR"].apply(
+                lambda x: f"R$ {x:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") if pd.notnull(x) else ""
+            )
 
         # Formata DATA
         if "DATA" in df_filtrado.columns:
